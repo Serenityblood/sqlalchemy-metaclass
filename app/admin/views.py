@@ -4,14 +4,37 @@ from aiohttp_session import new_session
 
 from app.admin.schemes import AdminSchema
 from app.web.app import View
-from app.web.utils import json_response
+from app.web.middlewares import HTTP_ERROR_CODES
+from app.web.utils import json_response, error_json_response
 
 
 class AdminLoginView(View):
     @request_schema(AdminSchema)
     @response_schema(AdminSchema, 200)
     async def post(self):
-        raise NotImplementedError
+        email = self.data['email']
+        password = self.data['password']
+        admin = await self.request.app.store.admins.get_by_email(email)
+        if admin is None:
+            return error_json_response(
+                    http_status=403,
+                    message='No such user in db',
+                    data=self.data,
+                    status=HTTP_ERROR_CODES[403]
+                )
+
+        if admin.is_password_valid(password):
+            session = await new_session(self.request)
+            session['admin'] = {"email": admin.email, "id": admin.id}
+            return json_response(
+                data=AdminSchema().dump(obj=admin)
+            )
+        return error_json_response(
+                    http_status=403,
+                    message='No such user in db',
+                    data=self.data,
+                    status=HTTP_ERROR_CODES[403]
+                )
 
 
 class AdminCurrentView(View):

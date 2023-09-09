@@ -1,7 +1,7 @@
 import json
 import typing
 
-from aiohttp.web_exceptions import HTTPException, HTTPUnprocessableEntity
+from aiohttp.web_exceptions import HTTPUnprocessableEntity, HTTPMethodNotAllowed, HTTPUnauthorized, HTTPForbidden, HTTPNotFound, HTTPBadRequest, HTTPConflict
 from aiohttp.web_middlewares import middleware
 from aiohttp_apispec import validation_middleware
 from aiohttp_session import get_session
@@ -40,20 +40,51 @@ async def error_handling_middleware(request: "Request", handler):
     except HTTPUnprocessableEntity as e:
         return error_json_response(
             http_status=400,
-            status="bad_request",
+            status=HTTP_ERROR_CODES[400],
             message=e.reason,
             data=json.loads(e.text),
         )
-    except HTTPException as e:
+    except HTTPMethodNotAllowed as e:
         return error_json_response(
-            http_status=e.status,
-            status=HTTP_ERROR_CODES[e.status],
+            http_status=405,
+            status=HTTP_ERROR_CODES[405],
+            message=str(e),
+        )
+    except HTTPUnauthorized as e:
+        return error_json_response(
+            http_status=401,
+            status=HTTP_ERROR_CODES[401],
+            message=str(e),
+        )
+    except HTTPForbidden as e:
+        return error_json_response(
+            http_status=403,
+            status=HTTP_ERROR_CODES[403],
+            message=str(e),
+        )
+    except HTTPNotFound as e:
+        return error_json_response(
+            http_status=404,
+            status=HTTP_ERROR_CODES[404],
+            message=str(e),
+        )
+    except HTTPBadRequest as e:
+        return error_json_response(
+            http_status=400,
+            status=HTTP_ERROR_CODES[400],
+            message=str(e),
+        )
+    except HTTPConflict as e:
+        return error_json_response(
+            http_status=409,
+            status=HTTP_ERROR_CODES[409],
             message=str(e),
         )
     except Exception as e:
-        request.app.logger.error("Exception", exc_info=e)
         return error_json_response(
-            http_status=500, status="internal server error", message=str(e)
+            http_status=500,
+            status=HTTP_ERROR_CODES[500],
+            message=str(e)
         )
 
 
